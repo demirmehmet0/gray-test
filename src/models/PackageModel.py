@@ -1,168 +1,151 @@
-import numbers
+from typing import Optional, Union, Literal, List, Dict
+from pydantic import Field, validator, BaseModel
 
-from pydantic import Field, validator
-from typing import List, Optional, Union, Any, Dict,Literal
+from sdks.novavision.src.base.model import (
+    Package,
+    Input,
+    Output,
+    Image,
+    Config,
+    Inputs,
+    Configs,
+    Outputs,
+    Response,
+    Request,
 
-from sdks.novavision.src.base.model import Package,Input, Output, Image, Config, Inputs, Configs, Outputs, Response, Request
+    BoundingBox, KeyPoints, Detection
+)
 
 
-class InputImage(Input):
-    name: Literal["inputImage"] = "inputImage"
-    value: Union[List[Image],Image]
-    type = "object"
+
+class InputTimeStamp(Input):
+    name: Literal["inputTimeStamp"] = "inputTimeStamp"
+    value: Union[List[Image], Image, List[Detection], Detection, Dict, List]
+    type: str = "object"
 
     @validator("type", pre=True, always=True)
     def set_type_based_on_value(cls, value, values):
         value = values.get('value')
         if isinstance(value, Image):
             return "object"
+        elif isinstance(value, Detection):
+            return "object"
+        elif isinstance(value, dict):
+            return "dict"
         elif isinstance(value, list):
             return "list"
-
     class Config:
-        title = "Images"
+        title = "Data"
 
-class OutputData(Output):
-    name: Literal["outputData"] = "outputData"
-    value: List
-    type: Literal["list"] = "list"
-
-
-class configTypeSegmentation(Config):
-    name: Literal["segmentation"] = "segmentation"
-    value: Literal["segmentation"] = "segmentation"
+class TimeStampFormat(Config):
+    """
+        Please enter the date and time in any format you prefer.
+    """
+    name: Literal["TimeStampFormat"] = "TimeStampFormat"
+    value: str = Field(default="%Y-%m-%d %H:%M:%S:%f")
     type: Literal["string"] = "string"
-    field: Literal["option"] = "option"
+    field: Literal["textInput"] = "textInput"
 
     class Config:
-        title = "Segmentation"
+        title = "Time Stamp Format"
 
 
-class ConfigType(Config):
-    name: Literal["configType"] = "configType"
-    value: Union[configTypeSegmentation]
-    type: Literal["object"] = "object"
-    field: Literal["dropdownlist"] = "dropdownlist"
+class OutputTimeStamp(Output):
+    name: Literal["outputTimeStamp"] = "outputTimeStamp"
+    value: Union[Dict]
+    type: str = "dict"
 
     class Config:
-        title = "Type"
+        title = "Time Stamp Format"
 
+class NowConfigs(Configs):
+    timeStampFormat: TimeStampFormat
 
-class SegmentationInputs(Inputs):
-    inputImage: InputImage
+class NowOutputs(Outputs):
+    outputTimeStamp: OutputTimeStamp
 
-
-
-class SegmentationConfigs(Configs):
-    configType: ConfigType
-
-
-
-class SegmentationOutputs(Outputs):
-    outputData: OutputData
-
-
-
-class SegmentationRequest(Request):
-    inputs: Optional[SegmentationInputs]
-    configs: SegmentationConfigs
     class Config:
-        schema_extra = {
+        title = "Time Stamp Outputs"
+
+class NowRequest(Request):
+    configs: NowConfigs
+
+    class Config:
+        json_schema_extra = {
             "target": "configs"
         }
 
+class NowResponse(Response):
+    outputs: NowOutputs
 
-class SegmentationResponse(Response):
-    outputs: SegmentationOutputs
-
-
-
-class SegmentationExecutor(Config):
-    name: Literal["Segmentation"] = "Segmentation"
-    value: Union[SegmentationRequest, SegmentationResponse]
+class NowExecutor(Config):
+    name: Literal["Now"] = "Now"
+    value: Union[NowRequest, NowResponse]
     type: Literal["object"] = "object"
     field: Literal["option"] = "option"
 
     class Config:
-        title = "Segmentation"
-        schema_extra = {
+        title = " Now Executor"
+        json_schema_extra = {
             "target": {
                 "value": 0
             }
         }
 
 
-class BatchSize(Config):
-    name: Literal["BatchSize"] = "BatchSize"
-    value: int = Field(ge=1, le=100)
-    type: Literal["number"] = "number"
-    field: Literal["textInput"] = "textInput"
+class ConvertTimeInput(Inputs):
+    inputTimeStamp: InputTimeStamp
+
+class ConvertTimeConfigs(Configs):
+    timeStampFormat: TimeStampFormat
+
+class ConvertTimeOutputs(Outputs):
+    outputTimeStamp: OutputTimeStamp
 
     class Config:
-        title = "Batch Size"
+        title = "Time Stamp Outputs"
 
-
-class Path(Config):
-    name: Literal["path"] = "path"
-    value: str
-    type: Literal["string"] = "string"
-    field: Literal["textInput"] = "textInput"
+class ConvertTimeRequest(Request):
+    inputs: Optional[ConvertTimeInput]
+    configs: ConvertTimeConfigs
 
     class Config:
-        title = "Path"
-
-class TrainConfigs(Configs):
-    configPath: Path
-    batchSize: BatchSize
-
-class TrainOutputs(Outputs):
-    outputData: OutputData
-
-class TrainRequest(Request):
-    configs: TrainConfigs
-
-    class Config:
-        schema_extra = {
+        json_schema_extra = {
             "target": "configs"
         }
 
+class ConvertTimeResponse(Response):
+    outputs: ConvertTimeOutputs
 
-class TrainResponse(Response):
-    outputs: TrainOutputs
-
-
-class TrainExecutor(Config):
-    name: Literal["Train"] = "Train"
-    value: Union[TrainRequest, TrainResponse]
+class ConvertTimeExecutor(Config):
+    name: Literal["ConvertTime"] = "ConvertTime"
+    value: Union[ConvertTimeRequest, ConvertTimeResponse]
     type: Literal["object"] = "object"
     field: Literal["option"] = "option"
 
     class Config:
-        title = "Train"
-        schema_extra = {
+        title = " Convert Time"
+        json_schema_extra = {
             "target": {
                 "value": 0
             }
         }
-
-
 
 class ConfigExecutor(Config):
     name: Literal["ConfigExecutor"] = "ConfigExecutor"
-    value: Union[SegmentationExecutor,TrainExecutor]
-    type:Literal["executor"] = "executor"
+    value: Union[NowExecutor, ConvertTimeExecutor]
+    type: Literal["executor"] = "executor"
     field: Literal["dependentDropdownlist"] = "dependentDropdownlist"
 
     class Config:
         title = "Task"
-
-
 class PackageConfigs(Configs):
     executor: ConfigExecutor
 
-
 class PackageModel(Package):
     configs: PackageConfigs
-    type: Literal["capsule"] = "capsule"
-    name: Literal["Segmentation"] = "Segmentation"
-    uID = "1221112"
+    type: Literal["component"] = "component"
+    name: Literal["TimeStamp"] = "TimeStamp"
+
+    class Config:
+        title = "Package Model"
